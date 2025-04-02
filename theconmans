@@ -1,0 +1,242 @@
+using Terraria;
+using Terraria.ID;
+using Terraria.ModLoader;
+
+namespace YourMod.Items
+{
+    public class TSword : ModItem
+    {
+        public override void SetStaticDefaults()
+        {
+            DisplayName.SetDefault("T Sword");
+            Tooltip.SetDefault("A sword forged with strong metals and wood.");
+        }
+
+        public override void SetDefaults()
+        {
+            item.damage = 15; // Set damage to 15
+            item.melee = true; // It's a melee weapon
+            item.width = 40;
+            item.height = 40;
+            item.useTime = 20; // Attack speed
+            item.useAnimation = 20;
+            item.useStyle = ItemUseStyleID.SwingThrow; // Standard sword swing
+            item.knockBack = 5; // Moderate knockback
+            item.value = Item.sellPrice(gold: 1); // Sell price in gold
+            item.rare = ItemRarityID.Green; // Rarity color
+            item.UseSound = SoundID.Item1; // Swing sound
+        }
+
+        public override void AddRecipes()
+        {
+            ModRecipe recipe = new ModRecipe(mod);
+            recipe.AddRecipeGroup("MythrilOrichalcumBar", 3); // 3 Mythril/Orichalcum Bars
+            recipe.AddRecipeGroup("IronBar", 2); // 2 Iron/Lead Bars
+            recipe.AddRecipeGroup("Wood", 2); // 2 of any Wood
+            recipe.AddTile(TileID.MythrilAnvil); // Crafted at Mythril/Orichalcum Anvil
+            recipe.SetResult(this);
+            recipe.AddRecipe();
+        }
+    }
+}
+using Terraria;
+using Terraria.ID;
+using Terraria.ModLoader;
+using System.Linq;
+
+namespace YourMod.NPCs
+{
+    [AutoloadHead]
+    public class Conner : ModNPC
+    {
+        public override void SetStaticDefaults()
+        {
+            DisplayName.SetDefault("Conner");
+            Main.npcFrameCount[npc.type] = 25; // Standard town NPC frames
+        }
+
+        public override void SetDefaults()
+        {
+            npc.townNPC = true;
+            npc.friendly = true;
+            npc.width = 18;
+            npc.height = 40;
+            npc.aiStyle = 7; // Town NPC AI
+            npc.damage = 10;
+            npc.defense = 15;
+            npc.lifeMax = 250;
+            npc.HitSound = SoundID.NPCHit1;
+            npc.DeathSound = SoundID.NPCDeath1;
+            npc.knockBackResist = 0.5f;
+        }
+
+        public override bool CanTownNPCSpawn(int numTownNPCs, int money)
+        {
+            // Spawns after any invasion has been defeated
+            return NPC.downedGoblins || NPC.downedPirates || NPC.downedMartians;
+        }
+
+        public override string GetChat()
+        {
+            string[] dialogue = {
+                "Survived another raid, huh? I like that.",
+                "Need some iron? I always keep some in stock during battle.",
+                "You ever wonder what would happen if time just... stopped?"
+            };
+
+            if (NPC.downedMechBossAny) 
+            {
+                return "You’ve beaten the machines, but are you ready for a real fight?";
+            }
+
+            return Main.rand.Next(dialogue);
+        }
+
+        public override void SetChatButtons(ref string button, ref string button2)
+        {
+            button = "Shop";
+
+            if (NPC.downedMechBoss3 && NPC.downedMechBoss2 && NPC.downedMechBoss1)
+            {
+                button2 = "Challenge"; // Option to fight after defeating all mech bosses
+            }
+        }
+
+        public override void OnChatButtonClicked(bool firstButton, ref bool shop)
+        {
+            if (firstButton)
+            {
+                shop = true;
+            }
+            else
+            {
+                if (Main.LocalPlayer.HasBuff(BuffID.Battle))
+                {
+                    Main.npcChatText = "You're already fighting, finish what you started!";
+                }
+                else
+                {
+                    Main.npcChatText = "Let's see what you're made of!";
+                    StartBattleEvent();
+                }
+            }
+        }
+
+        public override void SetupShop(Chest shop, ref int nextSlot)
+        {
+            shop.item[nextSlot].SetDefaults(ItemID.IronBar); // Sells Iron Bars
+            nextSlot++;
+
+            if (Main.invasionType != 0) 
+            {
+                shop.item[nextSlot].SetDefaults(ModContent.ItemType<ChronoSeal>()); // Sells Chrono Seal during invasions
+                nextSlot++;
+            }
+        }
+
+        private void StartBattleEvent()
+        {
+            NPC.SpawnOnPlayer(Main.myPlayer, NPCID.GoblinSummoner); // Example boss spawn, modify as needed
+        }
+    }
+}
+using Terraria;
+using Terraria.ID;
+using Terraria.ModLoader;
+
+namespace YourMod.Items
+{
+    public class ChronoSeal : ModItem
+    {
+        public override void SetStaticDefaults()
+        {
+            DisplayName.SetDefault("Chrono Seal");
+            Tooltip.SetDefault("A mystical seal that freezes time for 5 seconds.");
+        }
+
+        public override void SetDefaults()
+        {
+            item.width = 20;
+            item.height = 20;
+            item.useTime = 20;
+            item.useAnimation = 20;
+            item.useStyle = ItemUseStyleID.HoldingUp;
+            item.value = Item.sellPrice(silver: 50);
+            item.rare = ItemRarityID.LightRed;
+            item.consumable = true; // One-time use
+        }
+
+        public override bool UseItem(Player player)
+        {
+            if (Main.netMode != NetmodeID.MultiplayerClient)
+            {
+                FreezeEnemies();
+            }
+            return true;
+        }
+
+        private void FreezeEnemies()
+        {
+            foreach (NPC npc in Main.npc.Where(n => n.active && !n.boss))
+            {
+                npc.AddBuff(BuffID.Frozen, 300); // 5 seconds freeze
+            }
+        }
+
+        public override void AddRecipes()
+        {
+            ModRecipe recipe = new ModRecipe(mod);
+            recipe.AddIngredient(ItemID.FallenStar, 3);
+            recipe.AddIngredient(ItemID.SoulofNight, 5);
+            recipe.AddTile(TileID.MythrilAnvil);
+            recipe.SetResult(this);
+            recipe.AddRecipe();
+        }
+    }
+}
+using Terraria;
+using Terraria.ID;
+using Terraria.ModLoader;
+
+namespace YourMod.NPCs
+{
+    public class GuideShop : GlobalNPC
+    {
+        public override void SetupShop(int type, Chest shop, ref int nextSlot)
+        {
+            if (type == NPCID.Guide) // Modify Guide's shop
+            {
+                if (NPC.downedBoss1) // Eye of Cthulhu defeated
+                {
+                    shop.item[nextSlot].SetDefaults(ItemID.SuspiciousLookingEye);
+                    nextSlot++;
+                }
+
+                if (NPC.downedBoss2) // Eater of Worlds/Brain of Cthulhu defeated
+                {
+                    if (WorldGen.crimson)
+                    {
+                        shop.item[nextSlot].SetDefaults(ItemID.BloodySpine); // Crimson world
+                    }
+                    else
+                    {
+                        shop.item[nextSlot].SetDefaults(ItemID.WormFood); // Corruption world
+                    }
+                    nextSlot++;
+                }
+
+                if (NPC.downedBoss3) // Skeletron defeated
+                {
+                    shop.item[nextSlot].SetDefaults(ItemID.ClothierVoodooDoll);
+                    nextSlot++;
+                }
+
+                if (NPC.downedQueenBee) // Queen Bee defeated
+                {
+                    shop.item[nextSlot].SetDefaults(ItemID.Abeemination);
+                    nextSlot++;
+                }
+            }
+        }
+    }
+}

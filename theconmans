@@ -240,3 +240,75 @@ namespace YourMod.NPCs
         }
     }
 }
+class ArmorSet:
+    def __init__(self, name, required_class, armor_percentage, summoner_bonus=0, ranger_bonus=0):
+        self.name = name
+        self.required_class = required_class
+        self.armor_percentage = armor_percentage
+        self.summoner_bonus = summoner_bonus
+        self.ranger_bonus = ranger_bonus
+
+    def apply_set_bonus(self, player_class, player_summons):
+        if player_class == self.required_class:
+            if player_class == "Summoner":
+                player_summons += self.summoner_bonus
+                print(f"Summoner Class: +{self.summoner_bonus} summons applied.")
+            if player_class == "Ranger":
+                print(f"Ranger Class: Bonus applied.")
+            print(f"Armor Set Active: {self.armor_percentage}% armor.")
+        else:
+            print("This Armor Set does not apply to your class.")
+
+class Player:
+    def __init__(self, player_class, summons=0):
+        self.player_class = player_class
+        self.summons = summons
+
+    def equip_armor(self, armor_set):
+        armor_set.apply_set_bonus(self.player_class, self.summons)
+
+class CraftingRecipe:
+    def __init__(self, item_name, required_materials):
+        self.item_name = item_name
+        self.required_materials = required_materials
+
+    def craft(self, inventory):
+        for material, amount in self.required_materials.items():
+            if inventory.get(material, 0) < amount:
+                print(f"Not enough {material}. Needed {amount}, have {inventory.get(material, 0)}.")
+                return False
+        for material, amount in self.required_materials.items():
+            inventory[material] -= amount
+        print(f"{self.item_name} crafted successfully!")
+        return True
+
+# Crafting recipe for the T Armor Set (Chest and Helmet)
+t_armor_chest_helmet_recipe = CraftingRecipe(
+    "T Armor Chest/Helmet", 
+    {"Orichalcum Bar": 7, "Iron": 2, "Cobalt": 2}
+)
+
+# Crafting recipe for the T Armor Set (Leggings)
+t_armor_leggings_recipe = CraftingRecipe(
+    "T Armor Leggings", 
+    {"Orichalcum Bar": 2, "Iron": 2, "Cobalt": 2}
+)
+
+# Example inventory (player's crafting materials)
+inventory = {
+    "Orichalcum Bar": 10,
+    "Iron": 5,
+    "Cobalt": 5,
+}
+
+# Example player who is a Summoner
+player = Player(player_class="Summoner")
+
+# Crafting and equipping the T Armor Set
+if t_armor_chest_helmet_recipe.craft(inventory):
+    chest_helmet = ArmorSet("T Armor Chest/Helmet", "Summoner", 56, summoner_bonus=5)
+    player.equip_armor(chest_helmet)
+
+if t_armor_leggings_recipe.craft(inventory):
+    leggings = ArmorSet("T Armor Leggings", "Summoner", 56, summoner_bonus=5)
+    player.equip_armor(leggings)

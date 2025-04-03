@@ -312,3 +312,186 @@ if t_armor_chest_helmet_recipe.craft(inventory):
 if t_armor_leggings_recipe.craft(inventory):
     leggings = ArmorSet("T Armor Leggings", "Summoner", 56, summoner_bonus=5)
     player.equip_armor(leggings)
+using Terraria;
+using Terraria.ID;
+using Terraria.ModLoader;
+using Microsoft.Xna.Framework;
+using System.Collections.Generic;
+
+namespace YourMod.NPCs
+{
+    public class Maxine : ModNPC
+    {
+        private bool secondPhase = true; // Phase 2 trigger
+        private bool thirdPhase = false;  // Phase 3 (Expert/Master only)
+        
+        public override void SetDefaults()
+        {
+            npc.width = 48;
+            npc.height = 64;
+            npc.lifeMax = Main.expertMode ? 4500 : Main.masterMode ? 8300 : 3400;
+            npc.damage = 10;
+            npc.defense = 8;
+            npc.knockBackResist = 0.1f;
+            npc.aiStyle = -1; // Custom AI
+            npc.boss = true;
+            npc.npcSlots = 5f;
+            npc.value = Item.buyPrice(0, 15, 0, 0); // Drops 15 Gold Coins
+            npc.lavaImmune = true;
+            npc.noTileCollide = false;
+            npc.noGravity = false;
+            npc.HitSound = SoundID.NPCHit1;
+            npc.DeathSound = SoundID.NPCDeath6;
+            music = MusicID.Boss1;
+        }
+
+        public override void AI()
+        {
+            if (npc.life < npc.lifeMax * 0.5f && !secondPhase) 
+            {
+                EnterSecondPhase();
+            }
+
+            if (Main.masterMode && npc.life < npc.lifeMax * 0.25f && !thirdPhase) 
+            {
+                EnterThirdPhase();
+            }
+
+            if (!secondPhase)
+            {
+                PhaseOneAI();
+            }
+            else if (secondPhase && !thirdPhase)
+            {
+                PhaseTwoAI();
+            }
+            else
+            {
+                PhaseThreeAI();
+            }
+        }
+
+        private void PhaseOneAI()
+        {
+            if (Main.rand.NextBool(100)) 
+            {
+                NPC.NewNPC((int)npc.position.X + Main.rand.Next(-50, 50), (int)npc.position.Y, NPCID.Skeleton); // Summons minions
+            }
+
+            if (Main.rand.NextBool(150)) 
+            {
+                Projectile.NewProjectile(npc.position, new Vector2(0, 10), ProjectileID.Rock, 16, 2f); // Debris of Staff attack
+            }
+        }
+
+        private void EnterSecondPhase()
+        {
+            secondPhase = true;
+            npc.defense += 5;
+            npc.damage += 5;
+            npc.netUpdate = true;
+            Main.NewText("Maxine: 'That's good, alright, we'll keep fightin'!'", Color.Orange);
+            Main.NewText("Conner: 'You can do this, this is what we trained for!'", Color.Green);
+        }
+
+        private void PhaseTwoAI()
+        {
+            if (Main.rand.NextBool(120))
+            {
+                Projectile.NewProjectile(npc.position, new Vector2(5, 0), ModContent.ProjectileType<ClubHubProjectile>(), 20, 3f);
+            }
+
+            if (Main.rand.NextBool(100))
+            {
+                for (int i = 0; i < 5; i++) 
+                {
+                    Vector2 daggerVelocity = new Vector2(Main.rand.NextFloat(-5f, 5f), Main.rand.NextFloat(-5f, 5f));
+                    Projectile.NewProjectile(npc.position, daggerVelocity, ProjectileID.ThrowingKnife, Main.expertMode ? 8 : 5, 1f);
+                }
+            }
+        }
+
+        private void EnterThirdPhase()
+        {
+            thirdPhase = true;
+            npc.defense += 10;
+            npc.damage += 10;
+            npc.netUpdate = true;
+            Main.NewText("Maxine is getting more aggressive!", Color.Red);
+        }
+
+        private void PhaseThreeAI()
+        {
+            if (Main.rand.NextBool(80))
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    Vector2 clubVelocity = new Vector2(Main.rand.NextFloat(-7f, 7f), Main.rand.NextFloat(-7f, 7f));
+                    Projectile.NewProjectile(npc.position, clubVelocity, ModContent.ProjectileType<ClubHubProjectile>(), 25, 3f);
+                }
+            }
+
+            if (Main.rand.NextBool(60))
+            {
+                for (int i = 0; i < 8; i++)
+                {
+                    Vector2 daggerVelocity = new Vector2(Main.rand.NextFloat(-6f, 6f), Main.rand.NextFloat(-6f, 6f));
+                    Projectile.NewProjectile(npc.position, daggerVelocity, ProjectileID.ThrowingKnife, 10, 1f);
+                }
+            }
+        }
+
+        public override void NPCLoot()
+        {
+            Item.NewItem(npc.getRect(), ModContent.ItemType<ClubHub>());
+            Item.NewItem(npc.getRect(), ModContent.ItemType<ColesPicture>());
+            Item.NewItem(npc.getRect(), ModContent.ItemType<DebrisOfStaff>());
+            Item.NewItem(npc.getRect(), ItemID.GoldCoin, 15);
+
+            if (Main.expertMode || Main.masterMode)
+            {
+                Item.NewItem(npc.getRect(), ModContent.ItemType<AwardTrophy>());
+            }
+        }
+    }
+}
+using Terraria;
+using Terraria.ModLoader;
+using Terraria.ID;
+
+namespace YourMod.Items
+{
+    public class AwardTrophy : ModItem
+    {
+        public override void SetDefaults()
+        {
+            item.width = 24;
+            item.height = 30;
+            item.maxStack = 1;
+            item.rare = ItemRarityID.Expert;
+            item.value = Item.buyPrice(gold: 10);
+        }
+    }
+}
+using Terraria;
+using Terraria.ModLoader;
+using Terraria.ID;
+using Microsoft.Xna.Framework;
+
+namespace YourMod.Projectiles
+{
+    public class ClubHubProjectile : ModProjectile
+    {
+        public override void SetDefaults()
+        {
+            projectile.width = 32;
+            projectile.height = 32;
+            projectile.friendly = false;
+            projectile.hostile = true;
+            projectile.tileCollide = false;
+            projectile.ignoreWater = true;
+            projectile.aiStyle = 1;
+            projectile.damage = 20;
+        }
+    }
+}
